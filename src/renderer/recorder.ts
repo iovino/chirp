@@ -8,18 +8,8 @@
 // The mic stream is acquired per-recording and released on stop so macOS's
 // orange mic indicator only shows while the key is held. Costs ~100-200ms
 // at the front of each recording, which push-to-talk reaction time absorbs.
-
-interface ChirpApi {
-  onStart(cb: (inputDevice: string) => void): void;
-  onStop(cb: () => void): void;
-  sendAudio(wav: ArrayBuffer): void;
-  sendError(message: string): void;
-  sendInfo(message: string): void;
-}
-
-interface Window {
-  chirp: ChirpApi;
-}
+//
+// Bridge types (window.chirp) are declared in global.d.ts.
 
 /** Whisper wants 16kHz mono. */
 const TARGET_RATE = 16_000;

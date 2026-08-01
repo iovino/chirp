@@ -9,12 +9,19 @@ dictation feature, without the rest of the voice studio.
 ## How it works
 
 ```
-key down ──► snapshot frontmost app          (paste/darwin.ts captureFocus)
+key down ──► snapshot frontmost app          (paste/<platform>.ts captureFocus)
          ──► start mic capture               (renderer/recorder.ts, 16kHz WAV)
 key up   ──► whisper.cpp transcribes         (transcribe.ts → whisper-server)
          ──► re-activate the snapshotted app
          ──► save clipboard → stage text → synthetic ⌘V → restore clipboard
+         ──► …or, if there was no paste target (or the paste failed), the
+             transcript stays on the clipboard and the widget offers a Copy button
 ```
+
+The whole pipeline lives in `src/main/engine.ts` (`DictationEngine`), which
+emits `state`/`result`/`error` events and takes settings commands. The UI —
+floating widget, settings window, tray — consists of thin views on those
+events; OS-specific glue is isolated behind `src/main/paste/`.
 
 The clipboard save/paste/conditional-restore dance and the focus snapshot are
 ports of voicebox's `clipboard.rs`, `synthetic_keys.rs`, and
@@ -53,12 +60,21 @@ pastes, it's Accessibility. Restart chirp after granting.
 
 ## Usage
 
-Hold **right Option**, speak, release. A 🔴 in the menu bar means recording,
-💭 means transcribing, ⚠️ means check the terminal for an error.
+Hold **right Option**, speak, release. A small pill widget at the
+bottom-center of the screen shows what's happening: red bars while
+listening, blue shimmer while transcribing. After a dictation, a toast
+shows what was pasted. If there was nothing to paste into (or the paste
+failed), the transcript is copied to the clipboard instead and a bubble
+with the text and a **Copy** button stays on screen until dismissed.
+
+The widget never takes focus, so it can't steal the paste target. A small
+white bird in the menu bar is the escape hatch — Settings and Quit stay
+reachable there even if the widget is ever unclickable.
 
 ## Config
 
-Click the 🐤 tray icon to pick the **microphone** and **push-to-talk key**
+Hover the widget and click the **⚙ gear** (or use the tray icon →
+Settings…) to pick the **push-to-talk key**, **microphone**, and **model**
 (choices persist to config), or to open the config/log files.
 
 Everything else lives in `~/.chirp/config.json` (created on first run):
@@ -75,12 +91,34 @@ Everything else lives in `~/.chirp/config.json` (created on first run):
   built-in mic still appears as default but delivers pure silence — pin an
   external mic here if you dock clamshell-style.
 
-## Windows (later)
+## Windows (port in progress)
 
-The OS-specific glue lives behind `src/main/paste/` and the uiohook key hook
-is already cross-platform. `paste/win32.ts` has a basic SendKeys
-implementation plus TODOs mapping each gap to the voicebox Rust module that
-solves it properly (SendInput, AttachThreadInput focus dance, tray icon).
+Already cross-platform: the engine, the uiohook key hook, the getUserMedia
+recorder, and the widget/settings UI (all web tech). What Windows still
+needs:
+
+**Dev setup** — `npm install && npm start` should work as-is (the build
+script is plain node). whisper.cpp has no brew equivalent: download a
+release from
+[github.com/ggml-org/whisper.cpp/releases](https://github.com/ggml-org/whisper.cpp/releases)
+(or build it), then either put `whisper-server.exe` on PATH or set
+`whisperServerPath` in `%USERPROFILE%\.chirp\config.json`. Models go in
+`%USERPROFILE%\.chirp\models\`. No Accessibility/Input Monitoring
+equivalents exist — only the mic permission prompt.
+
+**Known gaps** (voicebox's Rust modules are the reference for each):
+
+- `paste/win32.ts` `captureFocus` returns `null`, so today every dictation
+  takes the clipboard-fallback path (transcript on clipboard + widget Copy
+  bubble) — usable, but no auto-paste. Fix: `GetForegroundWindow` /
+  `SetForegroundWindow` + `AttachThreadInput` (`focus_capture.rs`); a small
+  FFI layer like [koffi](https://koffi.dev) avoids a native build toolchain.
+- Paste synthesis is WScript `SendKeys` — flaky with elevated/UWP targets;
+  replace with `SendInput` Ctrl+V (`synthetic_keys.rs`).
+- The tray uses a macOS template PNG; Windows needs an `.ico` (and the
+  adaptive template-color behavior is macOS-only).
+- Untested: widget `focusable:false` + click-through behavior on Windows,
+  right-Alt keycode (3640) on Windows keyboards — `npm run keys` to verify.
 
 ## Known limitations
 
@@ -89,5 +127,5 @@ solves it properly (SendInput, AttachThreadInput focus dance, tray icon).
   clipboard API can't).
 - Recording starts ~100–200ms after key-down (mic stream is acquired per
   recording so the orange mic indicator isn't permanently on).
-- No visual overlay near the cursor — the menu bar emoji is the only
-  indicator.
+- The widget is pinned to the bottom-center of the primary display; it
+  doesn't follow the cursor across monitors yet.

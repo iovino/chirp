@@ -1,0 +1,263 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>chirp widget</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #root {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding-bottom: 6px;
+      }
+
+      /* ---- transcript bubble (paste failed → copy) ---- */
+      #bubble {
+        display: none;
+        max-width: 440px;
+        background: rgba(30, 30, 32, 0.96);
+        color: #f2f2f4;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        padding: 12px 14px;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+      }
+      #bubble.show {
+        display: block;
+        animation: rise 160ms ease-out;
+      }
+      #bubble .note {
+        font-size: 11px;
+        color: #9a9aa2;
+        margin-bottom: 6px;
+      }
+      #bubble .text {
+        font-size: 13px;
+        line-height: 1.45;
+        max-height: 7.2em;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      #bubble .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        justify-content: flex-end;
+      }
+      #bubble button {
+        font: inherit;
+        font-size: 12px;
+        padding: 4px 12px;
+        border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: #f2f2f4;
+        cursor: pointer;
+      }
+      #bubble button:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      #bubble button.primary {
+        background: #3a6ff0;
+        border-color: #3a6ff0;
+      }
+      #bubble button.primary:hover {
+        background: #4d7ef5;
+      }
+
+      /* ---- success toast ---- */
+      #toast {
+        display: none;
+        max-width: 400px;
+        background: rgba(30, 30, 32, 0.94);
+        color: #d9d9de;
+        border-radius: 10px;
+        padding: 7px 13px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      #toast.show {
+        display: block;
+        animation: rise 160ms ease-out;
+      }
+      #toast .check {
+        color: #4cc38a;
+        margin-right: 6px;
+      }
+
+      /* ---- the pill ---- */
+      #pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 30px;
+        padding: 0 12px;
+        border-radius: 15px;
+        background: rgba(30, 30, 32, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        transition: all 160ms ease;
+      }
+      #pill.idle {
+        opacity: 0.55;
+        height: 14px;
+        padding: 0 10px;
+        border-radius: 7px;
+      }
+      #pill.idle:hover {
+        opacity: 1;
+        height: 30px;
+        padding: 0 12px;
+        border-radius: 15px;
+      }
+      #pill .label {
+        font-size: 12px;
+        color: #d9d9de;
+        white-space: nowrap;
+      }
+      #pill.idle .label,
+      #pill.idle #gear {
+        display: none;
+      }
+      #pill.idle:hover .label,
+      #pill.idle:hover #gear {
+        display: block;
+      }
+      #pill.error {
+        border-color: rgba(255, 120, 120, 0.5);
+      }
+
+      /* listening bars */
+      #bars {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        height: 16px;
+      }
+      #bars span {
+        width: 3px;
+        height: 5px;
+        border-radius: 2px;
+        background: #6a6a72;
+      }
+      #pill.recording #bars span {
+        background: #ff5d5d;
+        animation: bounce 900ms ease-in-out infinite;
+      }
+      #pill.recording #bars span:nth-child(2) {
+        animation-delay: 120ms;
+      }
+      #pill.recording #bars span:nth-child(3) {
+        animation-delay: 240ms;
+      }
+      #pill.recording #bars span:nth-child(4) {
+        animation-delay: 360ms;
+      }
+      #pill.recording #bars span:nth-child(5) {
+        animation-delay: 480ms;
+      }
+      #pill.processing #bars span {
+        background: #8ab4ff;
+        animation: shimmer 1s ease-in-out infinite;
+      }
+      #pill.processing #bars span:nth-child(2) {
+        animation-delay: 100ms;
+      }
+      #pill.processing #bars span:nth-child(3) {
+        animation-delay: 200ms;
+      }
+      #pill.processing #bars span:nth-child(4) {
+        animation-delay: 300ms;
+      }
+      #pill.processing #bars span:nth-child(5) {
+        animation-delay: 400ms;
+      }
+
+      #gear {
+        border: none;
+        background: none;
+        color: #9a9aa2;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 2px;
+      }
+      #gear:hover {
+        color: #f2f2f4;
+      }
+
+      @keyframes bounce {
+        0%,
+        100% {
+          height: 5px;
+        }
+        50% {
+          height: 14px;
+        }
+      }
+      @keyframes shimmer {
+        0%,
+        100% {
+          opacity: 0.35;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes rise {
+        from {
+          transform: translateY(6px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="bubble" class="hit">
+        <div class="note">Couldn’t paste — copied to your clipboard instead</div>
+        <div class="text"></div>
+        <div class="actions">
+          <button id="dismiss">Dismiss</button>
+          <button id="copy" class="primary">Copy</button>
+        </div>
+      </div>
+      <div id="toast"><span class="check">✓</span><span class="msg"></span></div>
+      <div id="pill" class="idle hit">
+        <div id="bars"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="label" id="label">chirp</div>
+        <button id="gear" title="Settings">⚙</button>
+      </div>
+    </div>
+    <script src="./widget.js"></script>
+  </body>
+</html>

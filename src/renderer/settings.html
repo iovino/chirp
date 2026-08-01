@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>chirp settings</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        background: #f5f5f7;
+        color: #1c1c1e;
+        padding: 18px 20px;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #1e1e20;
+          color: #f2f2f4;
+        }
+        section {
+          background: #2a2a2d !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .row:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+        footer,
+        h2,
+        .empty {
+          color: #9a9aa2 !important;
+        }
+        button {
+          background: #3a3a3e !important;
+          border-color: rgba(255, 255, 255, 0.12) !important;
+          color: #f2f2f4 !important;
+        }
+      }
+      h1 {
+        font-size: 16px;
+        margin-bottom: 14px;
+      }
+      h2 {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6e6e73;
+        margin: 14px 2px 6px;
+      }
+      section {
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      .row:hover {
+        background: rgba(0, 0, 0, 0.04);
+      }
+      .row + .row {
+        border-top: 1px solid rgba(128, 128, 128, 0.14);
+      }
+      .row input[type='radio'] {
+        accent-color: #3a6ff0;
+      }
+      .row .name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .empty {
+        padding: 10px 12px;
+        color: #6e6e73;
+        font-style: italic;
+      }
+      footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 16px;
+        color: #6e6e73;
+        font-size: 12px;
+      }
+      footer .spacer {
+        flex: 1;
+      }
+      button {
+        font: inherit;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 7px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        background: #fff;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .links {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .links a {
+        color: #3a6ff0;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .links a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>chirp settings</h1>
+
+    <h2>Push-to-talk key</h2>
+    <section id="keys"></section>
+
+    <h2>Microphone</h2>
+    <section id="mics"></section>
+
+    <h2>Model</h2>
+    <section id="models"></section>
+
+    <div class="links">
+      <a id="open-config">Open config file</a>
+      <a id="open-log">Open log file</a>
+    </div>
+
+    <footer>
+      <span id="version">chirp</span>
+      <button id="updates" disabled title="Auto-update is planned but not wired up yet">
+        Check for updates…
+      </button>
+      <span class="spacer"></span>
+      <button id="quit">Quit chirp</button>
+    </footer>
+
+    <script src="./settings.js"></script>
+  </body>
+</html>
