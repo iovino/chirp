@@ -61,10 +61,19 @@ async function main(): Promise<void> {
   // stay reachable even if the widget's hover opt-in ever breaks. The
   // "…Template" filename marks it as a macOS template image, so the bird
   // renders white on a dark menu bar and black on a light one.
-  // TODO(windows): needs a real .ico instead.
-  const trayIcon = nativeImage.createFromPath(
+  let trayIcon = nativeImage.createFromPath(
     path.join(__dirname, '..', '..', 'assets', 'birdTemplate.png')
   );
+  if (process.platform === 'win32') {
+    // No template-image behavior here, and the black glyph vanishes on the
+    // dark taskbar — repaint it white (premultiplied: channels = alpha).
+    const size = trayIcon.getSize();
+    const bgra = trayIcon.toBitmap();
+    for (let i = 0; i < bgra.length; i += 4) {
+      bgra[i] = bgra[i + 1] = bgra[i + 2] = bgra[i + 3];
+    }
+    trayIcon = nativeImage.createFromBitmap(bgra, size);
+  }
   const tray = new Tray(trayIcon);
   tray.setToolTip('chirp');
   const trayMenu = Menu.buildFromTemplate([

@@ -3,6 +3,8 @@
  * during the transcription window (voicebox's focus_capture.rs trick). */
 export interface FocusSnapshot {
   pid: number;
+  /** win32 only: HWND of the foreground window, for SetForegroundWindow. */
+  hwnd?: number;
 }
 
 export interface PasteBackend {

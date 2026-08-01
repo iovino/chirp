@@ -14,19 +14,20 @@ import { uIOhook } from 'uiohook-napi';
 // export doesn't cover the right-hand modifier variants, so they're pinned
 // here. Run `npm run keys` and press keys to find any other code.
 export const Keycodes = {
-  RightAlt: 3640, // right Option on macOS
-  RightMeta: 3676, // right Cmd on macOS
-  LeftAlt: 56, // left Option on macOS
-  LeftMeta: 3675, // left Cmd on macOS
+  RightAlt: 3640, // right Option on macOS, right Alt on Windows
+  RightMeta: 3676, // right Cmd on macOS, right Win on Windows
+  LeftAlt: 56, // left Option on macOS, left Alt on Windows
+  LeftMeta: 3675, // left Cmd on macOS, left Win on Windows
 } as const;
 
 /** Friendly label for a keycode, for the tray menu. */
 export function keyName(keycode: number): string {
+  const mac = process.platform === 'darwin';
   const names: Record<number, string> = {
-    [Keycodes.RightAlt]: 'right Option',
-    [Keycodes.RightMeta]: 'right Cmd',
-    [Keycodes.LeftAlt]: 'left Option',
-    [Keycodes.LeftMeta]: 'left Cmd',
+    [Keycodes.RightAlt]: mac ? 'right Option' : 'right Alt',
+    [Keycodes.RightMeta]: mac ? 'right Cmd' : 'right Win',
+    [Keycodes.LeftAlt]: mac ? 'left Option' : 'left Alt',
+    [Keycodes.LeftMeta]: mac ? 'left Cmd' : 'left Win',
   };
   return names[keycode] ?? `keycode ${keycode}`;
 }

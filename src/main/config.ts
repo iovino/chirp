@@ -27,7 +27,12 @@ const DEFAULTS: Config = {
   keycode: 3640,
   language: 'en',
   modelPath: path.join(os.homedir(), '.chirp', 'models', 'ggml-base.en.bin'),
-  whisperServerPath: 'whisper-server',
+  // macOS: resolved via PATH (brew). Windows: no package manager, so the
+  // convention is a whisper.cpp release unzipped into ~/.chirp/bin.
+  whisperServerPath:
+    process.platform === 'win32'
+      ? path.join(os.homedir(), '.chirp', 'bin', 'whisper-server.exe')
+      : 'whisper-server',
   whisperPort: 47892,
   threads: 4,
   minDurationMs: 300,

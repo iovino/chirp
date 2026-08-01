@@ -27,9 +27,13 @@ export class Transcriber {
       { stdio: 'ignore' }
     );
     this.proc.on('error', (err) => {
+      const hint =
+        process.platform === 'darwin'
+          ? 'Is whisper.cpp installed? (brew install whisper-cpp)'
+          : 'Is whisper.cpp installed? Download a Windows release from ' +
+            'github.com/ggml-org/whisper.cpp/releases into %USERPROFILE%\\.chirp\\bin\\';
       console.error(
-        `[chirp] failed to launch ${this.cfg.whisperServerPath}: ${err.message}\n` +
-          '        Is whisper.cpp installed? (brew install whisper-cpp)'
+        `[chirp] failed to launch ${this.cfg.whisperServerPath}: ${err.message}\n        ${hint}`
       );
       this.proc = null;
     });

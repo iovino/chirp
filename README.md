@@ -83,7 +83,7 @@ Everything else lives in `~/.chirp/config.json` (created on first run):
   right Cmd. Find any key's code with `npm run keys`.
 - `modelPath` — swap models freely: `ggml-small.en.bin` is noticeably more
   accurate, `ggml-large-v3-turbo.bin` is the best that still feels instant
-  on Apple Silicon. Download from
+  on Apple Silicon or an NVIDIA GPU (CUDA build). Download from
   [huggingface.co/ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/tree/main).
 - `language` — Whisper language hint (use a non-`.en` model for non-English).
 - `inputDevice` — case-insensitive substring of the mic to record from
@@ -91,34 +91,54 @@ Everything else lives in `~/.chirp/config.json` (created on first run):
   built-in mic still appears as default but delivers pure silence — pin an
   external mic here if you dock clamshell-style.
 
-## Windows (port in progress)
+## Setup (Windows)
 
-Already cross-platform: the engine, the uiohook key hook, the getUserMedia
-recorder, and the widget/settings UI (all web tech). What Windows still
-needs:
+```sh
+# 1. Dependencies
+npm install
 
-**Dev setup** — `npm install && npm start` should work as-is (the build
-script is plain node). whisper.cpp has no brew equivalent: download a
-release from
-[github.com/ggml-org/whisper.cpp/releases](https://github.com/ggml-org/whisper.cpp/releases)
-(or build it), then either put `whisper-server.exe` on PATH or set
-`whisperServerPath` in `%USERPROFILE%\.chirp\config.json`. Models go in
-`%USERPROFILE%\.chirp\models\`. No Accessibility/Input Monitoring
-equivalents exist — only the mic permission prompt.
+# 2. whisper.cpp — no brew equivalent; unzip a prebuilt release into ~/.chirp/bin
+#    https://github.com/ggml-org/whisper.cpp/releases
+#      NVIDIA GPU: whisper-cublas-12.4.0-bin-x64.zip (bundles the CUDA
+#                  runtime DLLs — no toolkit install needed)
+#      CPU only:   whisper-blas-bin-x64.zip
 
-**Known gaps** (voicebox's Rust modules are the reference for each):
+# 3. Whisper model(s), into ~/.chirp/models
+#    With an NVIDIA GPU, go straight to large-v3-turbo (~1.6GB) — a 3070
+#    transcribes a short utterance in well under a second:
+curl -L -o "$USERPROFILE/.chirp/models/ggml-large-v3-turbo.bin" \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
+#    On CPU, start with base.en (~140MB) and try small.en:
+curl -L -o "$USERPROFILE/.chirp/models/ggml-base.en.bin" \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
 
-- `paste/win32.ts` `captureFocus` returns `null`, so today every dictation
-  takes the clipboard-fallback path (transcript on clipboard + widget Copy
-  bubble) — usable, but no auto-paste. Fix: `GetForegroundWindow` /
-  `SetForegroundWindow` + `AttachThreadInput` (`focus_capture.rs`); a small
-  FFI layer like [koffi](https://koffi.dev) avoids a native build toolchain.
-- Paste synthesis is WScript `SendKeys` — flaky with elevated/UWP targets;
-  replace with `SendInput` Ctrl+V (`synthetic_keys.rs`).
-- The tray uses a macOS template PNG; Windows needs an `.ico` (and the
-  adaptive template-color behavior is macOS-only).
-- Untested: widget `focusable:false` + click-through behavior on Windows,
-  right-Alt keycode (3640) on Windows keyboards — `npm run keys` to verify.
+# 4. Run — hold right Alt to dictate
+npm start
+```
+
+The default `whisperServerPath` on Windows is
+`%USERPROFILE%\.chirp\bin\whisper-server.exe`; point it elsewhere in
+`%USERPROFILE%\.chirp\config.json` if you installed whisper.cpp differently.
+No Accessibility/Input Monitoring equivalents exist — at most a mic
+permission prompt (Settings → Privacy & security → Microphone → "Let
+desktop apps access your microphone").
+
+**How the win32 paste works**: same shape as macOS — focus snapshot at
+key-down (`GetForegroundWindow`), re-activation at paste time
+(`SetForegroundWindow` bracketed by `AttachThreadInput`), then a synthetic
+`SendInput` Ctrl+V. The user32 calls run in a persistent PowerShell worker
+(`Add-Type` P/Invoke, compiled once at first use) so there's no native
+build toolchain and no per-dictation process-spawn latency.
+
+**Remaining Windows rough edges**:
+
+- Pasting into *elevated* (admin) windows fails silently — Windows blocks
+  synthetic input across integrity levels (UIPI). The transcript stays on
+  the clipboard; paste manually.
+- Clipboard-history tools (Win+V) will see each transcript flash through
+  the clipboard during the paste window.
+- Right Alt is AltGr on some non-US keyboard layouts (it emits Ctrl+Alt);
+  rebind via the settings gear if dictating types characters.
 
 ## Known limitations
 
@@ -127,5 +147,7 @@ equivalents exist — only the mic permission prompt.
   clipboard API can't).
 - Recording starts ~100–200ms after key-down (mic stream is acquired per
   recording so the orange mic indicator isn't permanently on).
+- The first dictation after launch (or a model switch) stalls a few seconds
+  while whisper-server loads the model — noticeable with large-v3-turbo.
 - The widget is pinned to the bottom-center of the primary display; it
   doesn't follow the cursor across monitors yet.

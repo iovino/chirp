@@ -179,9 +179,7 @@ export class DictationEngine extends EventEmitter<EngineEvents> {
   }
 
   /** Paste into the captured target, or fall back to leaving the text on
-   * the clipboard so it is never lost. NOTE(windows): win32 captureFocus
-   * returns null until implemented, so Windows currently always takes the
-   * clipboard path — implementing focus capture re-enables paste there. */
+   * the clipboard so it is never lost. */
   private async deliver(text: string): Promise<void> {
     const focus = await this.focusPromise;
     if (focus) {
