@@ -35,6 +35,9 @@
         .empty {
           color: #9a9aa2 !important;
         }
+        .warn {
+          color: #e0a52e !important;
+        }
         button {
           background: #3a3a3e !important;
           border-color: rgba(255, 255, 255, 0.12) !important;
@@ -80,6 +83,20 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .row.static {
+        cursor: default;
+      }
+      .row.static:hover {
+        background: none !important;
+      }
+      .warn {
+        padding: 8px 12px;
+        border-top: 1px solid rgba(128, 128, 128, 0.14);
+        color: #9a6b00;
+        font-size: 12px;
+        line-height: 1.4;
+        cursor: default;
       }
       .empty {
         padding: 10px 12px;

@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('chirp', {
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   applySettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
+  captureKey: () => ipcRenderer.invoke('settings:capture-key'),
   onSettingsChanged: (cb: (snap: unknown) => void) =>
     ipcRenderer.on('settings:changed', (_e, snap: unknown) => cb(snap)),
   openPath: (which: 'config' | 'log') => ipcRenderer.send('ui:open-path', which),

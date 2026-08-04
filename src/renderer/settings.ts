@@ -1,5 +1,6 @@
-// Settings renderer — radio lists for key/mic/model, rendered from the
-// settings snapshot and re-rendered on every 'settings:changed' push.
+// Settings renderer — press-to-bind row for the key, radio lists for
+// mic/model, rendered from the settings snapshot and re-rendered on every
+// 'settings:changed' push.
 //
 // NOTE: this file must stay a plain script (no import/export) — it is
 // loaded directly by settings.html without a bundler. Shared bridge types
@@ -37,16 +38,44 @@ function fill(sectionId: string, rows: HTMLElement[], emptyText: string): void {
   }
 }
 
+// True while the main process is waiting for the user to press a key.
+let capturingKey = false;
+
+function keyRows(snap: ChirpSettingsSnapshot): HTMLElement[] {
+  const row = document.createElement('div');
+  row.className = 'row static';
+  const name = document.createElement('span');
+  name.className = 'name';
+  name.textContent = capturingKey
+    ? 'press any key… (Esc cancels)'
+    : snap.keyLabel;
+  const change = document.createElement('button');
+  change.textContent = 'Change…';
+  change.disabled = capturingKey;
+  change.addEventListener('click', () => {
+    capturingKey = true;
+    render(snap);
+    void window.chirp.captureKey().then((next) => {
+      capturingKey = false;
+      render(next);
+    });
+  });
+  row.append(name, change);
+
+  const rows = [row];
+  if (snap.keyIsPrintable && !capturingKey) {
+    const warn = document.createElement('div');
+    warn.className = 'warn';
+    warn.textContent =
+      `⚠ "${snap.keyLabel}" types a character, so holding it to dictate will ` +
+      'also type into the focused app. A modifier or function key works better.';
+    rows.push(warn);
+  }
+  return rows;
+}
+
 function render(snap: ChirpSettingsSnapshot): void {
-  fill(
-    'keys',
-    snap.keyOptions.map((k) =>
-      radioRow('key', k.label, k.code === snap.keycode, () =>
-        void window.chirp.applySettings({ keycode: k.code })
-      )
-    ),
-    'no keys available'
-  );
+  fill('keys', keyRows(snap), 'no key bound');
 
   const micRows = [
     radioRow('mic', 'System default', snap.inputDevice === '', () =>

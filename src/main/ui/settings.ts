@@ -7,13 +7,15 @@ import { app, BrowserWindow, ipcMain, webContents } from 'electron';
 import * as path from 'path';
 import type { DictationEngine } from '../engine';
 import { MODELS_DIR } from '../engine';
-import { Keycodes, keyName } from '../hotkey';
+import { isPrintable, keyName } from '../hotkey';
 
 export interface SettingsSnapshot {
   version: string;
   keycode: number;
   keyLabel: string;
-  keyOptions: { code: number; label: string }[];
+  /** True when the bound key types a character while held (the hook can't
+   * swallow events) — the settings UI shows a warning. */
+  keyIsPrintable: boolean;
   inputDevice: string;
   devices: string[];
   modelPath: string;
@@ -21,7 +23,6 @@ export interface SettingsSnapshot {
 }
 
 export interface SettingsPatch {
-  keycode?: number;
   inputDevice?: string;
   modelPath?: string;
 }
@@ -33,11 +34,14 @@ export class SettingsWindow {
 
   init(): void {
     ipcMain.handle('settings:get', () => this.snapshot());
+    ipcMain.handle('settings:capture-key', async () => {
+      const code = await this.engine.captureKeycode();
+      if (code === null) return this.snapshot(); // Escape or timeout
+      this.engine.setKeycode(code);
+      console.log(`[chirp] push-to-talk key → ${keyName(code)}`);
+      return this.broadcast();
+    });
     ipcMain.handle('settings:set', async (_e, patch: SettingsPatch) => {
-      if (typeof patch.keycode === 'number') {
-        this.engine.setKeycode(patch.keycode);
-        console.log(`[chirp] push-to-talk key → ${keyName(patch.keycode)}`);
-      }
       if (typeof patch.inputDevice === 'string') {
         this.engine.setInputDevice(patch.inputDevice);
         console.log(
@@ -48,13 +52,18 @@ export class SettingsWindow {
         this.engine.setModel(patch.modelPath);
         console.log(`[chirp] model → ${path.basename(patch.modelPath)} (loading on next dictation)`);
       }
-      const snap = await this.snapshot();
-      // Broadcast to every renderer (widget shows the key label too).
-      for (const wc of webContents.getAllWebContents()) {
-        wc.send('settings:changed', snap);
-      }
-      return snap;
+      return this.broadcast();
     });
+  }
+
+  /** Push the current snapshot to every renderer (widget shows the key
+   * label too) and return it. */
+  private async broadcast(): Promise<SettingsSnapshot> {
+    const snap = await this.snapshot();
+    for (const wc of webContents.getAllWebContents()) {
+      wc.send('settings:changed', snap);
+    }
+    return snap;
   }
 
   show(): void {
@@ -88,10 +97,7 @@ export class SettingsWindow {
       version: app.getVersion(),
       keycode: cfg.keycode,
       keyLabel: keyName(cfg.keycode),
-      keyOptions: (Object.values(Keycodes) as number[]).map((code) => ({
-        code,
-        label: keyName(code),
-      })),
+      keyIsPrintable: isPrintable(cfg.keycode),
       inputDevice: cfg.inputDevice,
       devices: await this.engine.listInputDevices(),
       modelPath: cfg.modelPath,

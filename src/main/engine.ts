@@ -83,6 +83,12 @@ export class DictationEngine extends EventEmitter<EngineEvents> {
     this.hotkey.setKeycode(code);
   }
 
+  /** Capture the next key pressed anywhere (settings rebind flow); resolves
+   * with its keycode — not yet applied — or null on Escape/timeout. */
+  captureKeycode(): Promise<number | null> {
+    return this.hotkey.captureNext();
+  }
+
   setInputDevice(label: string): void {
     this.cfg.inputDevice = label;
     saveConfig(this.cfg);

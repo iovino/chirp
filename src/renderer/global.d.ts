@@ -15,7 +15,7 @@ interface ChirpSettingsSnapshot {
   version: string;
   keycode: number;
   keyLabel: string;
-  keyOptions: { code: number; label: string }[];
+  keyIsPrintable: boolean;
   inputDevice: string;
   devices: string[];
   modelPath: string;
@@ -23,7 +23,6 @@ interface ChirpSettingsSnapshot {
 }
 
 interface ChirpSettingsPatch {
-  keycode?: number;
   inputDevice?: string;
   modelPath?: string;
 }
@@ -45,6 +44,9 @@ interface ChirpApi {
   // settings (also used by the widget for the key label)
   getSettings(): Promise<ChirpSettingsSnapshot>;
   applySettings(patch: ChirpSettingsPatch): Promise<ChirpSettingsSnapshot>;
+  /** Enter capture mode; resolves once a key is bound or capture is
+   * canceled (Escape / timeout), with the resulting snapshot. */
+  captureKey(): Promise<ChirpSettingsSnapshot>;
   onSettingsChanged(cb: (snap: ChirpSettingsSnapshot) => void): void;
   openPath(which: 'config' | 'log'): void;
   quitApp(): void;
